@@ -1,38 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Cpu, Terminal, FileText, CheckCircle, Clock, ChevronDown, Lock, Activity } from 'lucide-react';
-
-interface Source {
-    title: string;
-    type: 'LAG' | 'PROP' | 'SOU';
-    relevance: number;
-    id: string;
-}
-
-interface RagStats {
-    latency: string;
-    confidence: number;
-    sources: Source[];
-    pipeline: {
-        search: string;
-        gen: string;
-        verify: string;
-    };
-}
-
-interface Message {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    ragStats?: RagStats;
-}
+import { Send, Cpu, Terminal, FileText, CheckCircle, Clock, ChevronDown, Lock, Activity, ThumbsUp, ThumbsDown, Settings } from 'lucide-react';
+import { useChatEngine } from '../../hooks/useChatEngine';
+import { RagStats, Source } from '../../types/chat';
+import Typewriter from '../ui/Typewriter';
+import SourceSidePanel from './SourceSidePanel';
+import { useSoundEffects } from '../../hooks/useSoundEffects';
 
 const ChatInterface: React.FC = () => {
-    const [input, setInput] = useState('');
-    const [messages, setMessages] = useState<Message[]>([
-        { id: '1', role: 'assistant', content: 'SYSTEM INITIALIZED. CONSTITUTIONAL MISTRAL READY. AWAITING QUERY.' }
-    ]);
+    const { messages, input, setInput, handleSend } = useChatEngine();
+    const { playSend, playReceive } = useSoundEffects();
     const scrollRef = useRef<HTMLDivElement>(null);
+    const [selectedSource, setSelectedSource] = useState<Source | null>(null);
+    const [isHighContrast, setIsHighContrast] = useState(false);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -41,44 +21,25 @@ const ChatInterface: React.FC = () => {
                 behavior: 'smooth'
             });
         }
-    }, [messages]);
 
-    const handleSend = () => {
-        if (!input.trim()) return;
-
-        const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input };
-        setMessages(prev => [...prev, userMsg]);
-        setInput('');
-
-        // Simulate AI "Thinking" and then responding
-        setTimeout(() => {
-            const aiMsg: Message = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: `Analysis of "${input}" completed against Constitutional Archives.\n\nKey finding: Chapter 2 of the Instrument of Government (Regeringsformen) establishes fundamental rights and freedoms, including the principle of public access to information, which is central to your inquiry.`,
-                ragStats: {
-                    latency: '1,247ms',
-                    confidence: 0.85,
-                    pipeline: { search: '45ms', gen: '1.1s', verify: '82ms' },
-                    sources: [
-                        { id: '1', title: 'Regeringsformen kap 2', type: 'LAG', relevance: 0.94 },
-                        { id: '2', title: 'Tryckfrihetsförordningen', type: 'LAG', relevance: 0.89 },
-                        { id: '3', title: 'SOU 2023:14', type: 'SOU', relevance: 0.72 }
-                    ]
-                }
-            };
-            setMessages(prev => [...prev, aiMsg]);
-        }, 1200);
-    };
+        // Play receive sound for new assistant messages
+        const lastMsg = messages[messages.length - 1];
+        if (messages.length > 1 && lastMsg.role === 'assistant') {
+            playReceive();
+        }
+    }, [messages, playReceive]);
 
     return (
         <div style={{
             height: '100%',
+            position: 'relative',
             display: 'flex',
             flexDirection: 'column',
             gap: '24px',
-            background: 'linear-gradient(180deg, rgba(5, 15, 20, 0.4) 0%, rgba(5, 15, 20, 0.1) 100%)',
-            backdropFilter: 'blur(20px)',
+            background: isHighContrast
+                ? 'rgba(5, 15, 20, 0.95)'
+                : 'linear-gradient(180deg, rgba(5, 15, 20, 0.4) 0%, rgba(5, 15, 20, 0.1) 100%)',
+            backdropFilter: isHighContrast ? 'none' : 'blur(20px)',
             borderRadius: '24px',
             padding: '32px',
             border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -112,9 +73,17 @@ const ChatInterface: React.FC = () => {
                         SECURE_NODE: MISTRAL_7B_CONSTITUTIONAL
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', opacity: 0.6 }}>
+                <div style={{ display: 'flex', gap: '8px', opacity: 0.6, alignItems: 'center' }}>
                     <Lock size={14} color="var(--text-muted)" />
                     <Activity size={14} color="var(--neon-teal)" />
+                    <motion.div
+                        whileHover={{ scale: 1.1, color: '#fff' }}
+                        onClick={() => setIsHighContrast(!isHighContrast)}
+                        style={{ cursor: 'pointer', marginLeft: '8px' }}
+                        title="Toggle High Contrast Mode"
+                    >
+                        <Settings size={14} color={isHighContrast ? "var(--neon-orange)" : "var(--text-muted)"} />
+                    </motion.div>
                 </div>
             </div>
 
@@ -155,20 +124,64 @@ const ChatInterface: React.FC = () => {
                                 </div>
 
                                 {/* Content Body */}
-                                <div style={{ padding: '20px', lineHeight: '1.8', fontSize: '1rem', color: '#f0f0f0', fontWeight: 300 }}>
-                                    {msg.content.split('\n').map((line, i) => (
-                                        <p key={i} style={{ margin: line === '' ? '12px 0' : '0' }}>{line}</p>
-                                    ))}
+                                <div style={{ padding: '20px', lineHeight: '1.8', fontSize: '1rem', color: '#f0f0f0', fontWeight: 300, position: 'relative' }}>
+                                    {msg.role === 'assistant' ? (
+                                        <Typewriter text={msg.content} />
+                                    ) : (
+                                        msg.content.split('\n').map((line, i) => (
+                                            <p key={i} style={{ margin: line === '' ? '12px 0' : '0' }}>{line}</p>
+                                        ))
+                                    )}
+
+                                    {/* Feedback Actions */}
+                                    {msg.role === 'assistant' && (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            whileHover={{ opacity: 1 }}
+                                            style={{
+                                                position: 'absolute',
+                                                bottom: '8px',
+                                                right: '12px',
+                                                display: 'flex',
+                                                gap: '8px',
+                                                padding: '4px',
+                                                borderRadius: '4px',
+                                                background: 'rgba(0,0,0,0.4)',
+                                                backdropFilter: 'blur(4px)'
+                                            }}
+                                        >
+                                            <motion.button
+                                                whileHover={{ scale: 1.2, color: 'var(--neon-teal)' }}
+                                                onClick={() => console.log('Positive feedback', msg.id)}
+                                                style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
+                                            >
+                                                <ThumbsUp size={14} />
+                                            </motion.button>
+                                            <motion.button
+                                                whileHover={{ scale: 1.2, color: 'var(--neon-orange)' }}
+                                                onClick={() => console.log('Negative feedback', msg.id)}
+                                                style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
+                                            >
+                                                <ThumbsDown size={14} />
+                                            </motion.button>
+                                        </motion.div>
+                                    )}
                                 </div>
 
                                 {msg.role === 'assistant' && msg.ragStats && (
-                                    <EvidenceDeck stats={msg.ragStats} />
+                                    <EvidenceDeck stats={msg.ragStats} onSourceClick={setSelectedSource} />
                                 )}
                             </div>
                         </motion.div>
                     ))}
                 </AnimatePresence>
             </div>
+
+            <AnimatePresence>
+                {selectedSource && (
+                    <SourceSidePanel source={selectedSource} onClose={() => setSelectedSource(null)} />
+                )}
+            </AnimatePresence>
 
             {/* Tactical Input */}
             <motion.div
@@ -212,7 +225,10 @@ const ChatInterface: React.FC = () => {
                     <motion.button
                         whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(255, 136, 77, 0.4)' }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={handleSend}
+                        onClick={() => {
+                            handleSend();
+                            playSend();
+                        }}
                         style={{
                             background: 'var(--neon-orange)',
                             color: '#000',
@@ -231,7 +247,7 @@ const ChatInterface: React.FC = () => {
     );
 };
 
-const EvidenceDeck: React.FC<{ stats: RagStats }> = ({ stats }) => {
+const EvidenceDeck: React.FC<{ stats: RagStats, onSourceClick: (s: Source) => void }> = ({ stats, onSourceClick }) => {
     const [expanded, setExpanded] = useState(false);
 
     return (
@@ -281,6 +297,8 @@ const EvidenceDeck: React.FC<{ stats: RagStats }> = ({ stats }) => {
                                     key={source.id}
                                     initial={{ x: -10, opacity: 0 }}
                                     animate={{ x: 0, opacity: 1 }}
+                                    whileHover={{ x: 5, backgroundColor: 'rgba(0, 229, 255, 0.05)', cursor: 'pointer' }}
+                                    onClick={() => onSourceClick(source)}
                                     style={{
                                         background: 'rgba(255, 255, 255, 0.02)',
                                         borderLeft: '2px solid var(--neon-teal)',
