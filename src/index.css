@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;600&display=swap');
+
+:root {
+    /* Colors - Cinematic Orange & Teal Palette */
+    --neon-orange: #FF884D;
+    /* Bronze / Claude Orange */
+    --neon-teal: #00E5FF;
+    /* Deep Cyan / Teal */
+    --void-black: #020202;
+    /* Deeper Black */
+
+    /* Background Tints */
+    --glass-bg: rgba(5, 10, 15, 0.45);
+    --glass-border: rgba(255, 136, 77, 0.2);
+    --glass-highlight: rgba(255, 255, 255, 0.03);
+
+    /* Text */
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.6);
+    --text-muted: rgba(255, 255, 255, 0.4);
+
+    /* Effects */
+    --glass-blur: blur(16px);
+    --neon-glow: 0 0 15px rgba(255, 136, 77, 0.3);
+    --teal-glow: 0 0 15px rgba(0, 229, 255, 0.2);
+
+    /* Transitions */
+    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+    font-family: 'Outfit', 'Inter', sans-serif;
+    line-height: 1.6;
+    font-weight: 400;
+
+    color-scheme: dark;
+    color: var(--text-primary);
+    background-color: var(--void-black);
+}
+
+body {
+    margin: 0;
+    width: 100vw;
+    height: 100dvh;
+    background: #000;
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
+}
+
+/* Deeper Vignette for cinematic focus */
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.95) 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Refined Scanline Effect */
+body::after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.08;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 2;
+}
+
+/* Elegant Scrollbar */
+::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 136, 77, 0.2);
+    border-radius: 10px;
+    transition: var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--neon-orange);
+    box-shadow: var(--neon-glow);
+}
+
+/* Monospace Utility for code/stats */
+.font-mono {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Smooth Interactive Elements */
+a,
+button,
+input,
+div {
+    transition: var(--transition-fast);
+}
+
+/* Selection Color */
+::selection {
+    background: var(--neon-orange);
+    color: black;
+}

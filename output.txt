@@ -1,0 +1,10 @@
+drwxr-xr-x@    - dev 31 Dec 06:00 dist
+.rw-r--r--@  370 dev 31 Dec 06:00 index.html
+drwxr-xr-x@    - dev 31 Dec 06:50 node_modules
+.rw-r--r--@    0 dev 31 Dec 06:51 output.txt
+.rw-r--r--@ 150k dev 31 Dec 06:50 package-lock.json
+.rw-r--r--@  945 dev 31 Dec 06:00 package.json
+drwxr-xr-x@    - dev 31 Dec 06:00 src
+.rw-r--r--@  772 dev 31 Dec 06:00 tsconfig.json
+.rw-r--r--@  252 dev 31 Dec 06:00 tsconfig.node.json
+.rw-r--r--@  165 dev 31 Dec 06:00 vite.config.ts
