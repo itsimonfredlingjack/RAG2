@@ -124,7 +124,16 @@ const ChatInterface: React.FC = () => {
                                 </div>
 
                                 {/* Content Body */}
-                                <div style={{ padding: '20px', lineHeight: '1.8', fontSize: '1rem', color: '#f0f0f0', fontWeight: 300, position: 'relative' }}>
+                                <div style={{
+                                    padding: '20px',
+                                    lineHeight: '1.85',
+                                    fontSize: '1.05rem',
+                                    color: '#ffffff',
+                                    fontWeight: 400,
+                                    letterSpacing: '0.01em',
+                                    textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                                    position: 'relative'
+                                }}>
                                     {msg.role === 'assistant' ? (
                                         <Typewriter text={msg.content} />
                                     ) : (

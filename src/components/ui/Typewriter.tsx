@@ -41,7 +41,10 @@ const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 15, onComplete })
     return (
         <>
             {displayedText.split('\n').map((line, i) => (
-                <p key={i} style={{ margin: line === '' ? '12px 0' : '0' }}>{line}</p>
+                <p key={i} style={{
+                    margin: line === '' ? '16px 0' : '0 0 8px 0',
+                    lineHeight: 'inherit'
+                }}>{line || '\u00A0'}</p>
             ))}
             {index < text.length && (
                 <span style={{
