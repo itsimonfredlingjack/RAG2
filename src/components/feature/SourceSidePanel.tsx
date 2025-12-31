@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, FileText, ExternalLink, Shield } from 'lucide-react';
+import { X, FileText, ExternalLink, Shield, Loader2, AlertCircle } from 'lucide-react';
 import { Source } from '../../types/chat';
+import { getDocumentById, DocumentDetails } from '../../api/constitutional';
 
 interface SourceSidePanelProps {
     source: Source;
@@ -9,6 +10,31 @@ interface SourceSidePanelProps {
 }
 
 const SourceSidePanel: React.FC<SourceSidePanelProps> = ({ source, onClose }) => {
+    const [document, setDocument] = useState<DocumentDetails | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchDocument = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const doc = await getDocumentById(source.id);
+                setDocument(doc);
+                if (!doc) {
+                    setError('Document not found in database');
+                }
+            } catch (err) {
+                setError('Failed to load document');
+                console.error('Document fetch error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDocument();
+    }, [source.id]);
+
     return (
         <motion.div
             initial={{ x: '100%' }}
@@ -77,39 +103,94 @@ const SourceSidePanel: React.FC<SourceSidePanelProps> = ({ source, onClose }) =>
                     borderRadius: '12px',
                     padding: '20px'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--neon-orange)', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '1px' }}>
-                        <Shield size={16} />
-                        VERIFIED_CONTENT
-                    </div>
+                    {loading ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '40px 0', color: 'var(--text-muted)' }}>
+                            <Loader2 size={32} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+                            <span style={{ fontSize: '0.9rem' }}>Loading document...</span>
+                        </div>
+                    ) : error ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '40px 0', color: '#ff6b6b' }}>
+                            <AlertCircle size={32} />
+                            <span style={{ fontSize: '0.9rem' }}>{error}</span>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--neon-orange)', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '1px' }}>
+                                <Shield size={16} />
+                                VERIFIED_CONTENT
+                            </div>
 
-                    <p style={{ lineHeight: '1.8', color: '#ddd', fontSize: '0.95rem', marginBottom: '20px' }}>
-                        This is a placeholder for the actual text content of <strong>{source.title}</strong>.
-                        In a real implementation, this panel would fetch and display the specific paragraph or section
-                        referenced by the RAG system.
-                    </p>
+                            {/* Document metadata */}
+                            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                                {document?.doc_type && (
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        <span style={{ color: 'var(--neon-teal)' }}>TYPE:</span> {document.doc_type.toUpperCase()}
+                                    </div>
+                                )}
+                                {document?.source && (
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        <span style={{ color: 'var(--neon-teal)' }}>SOURCE:</span> {document.source}
+                                    </div>
+                                )}
+                                {document?.date && (
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        <span style={{ color: 'var(--neon-teal)' }}>DATE:</span> {document.date}
+                                    </div>
+                                )}
+                            </div>
 
-                    <p style={{ lineHeight: '1.8', color: '#bbb', fontSize: '0.95rem', fontStyle: 'italic' }}>
-                        "Regeringsformen (RF) är en av Sveriges fyra grundlagar. Den fastslår att all offentlig makt i Sverige utgår från folket och att den svenska folkstyrelsen bygger på fri åsiktsbildning och på allmän och lika rösträtt."
-                    </p>
+                            {/* Document content */}
+                            <div style={{
+                                lineHeight: '1.8',
+                                color: '#ddd',
+                                fontSize: '0.95rem',
+                                whiteSpace: 'pre-wrap',
+                                background: 'rgba(0,0,0,0.2)',
+                                padding: '16px',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                maxHeight: '400px',
+                                overflowY: 'auto'
+                            }}>
+                                {document?.content || 'No content available'}
+                            </div>
 
-                    <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end' }}>
-                         <button style={{
-                             background: 'rgba(255, 255, 255, 0.05)',
-                             border: '1px solid rgba(255, 255, 255, 0.1)',
-                             color: '#fff',
-                             padding: '8px 16px',
-                             borderRadius: '6px',
-                             display: 'flex',
-                             alignItems: 'center',
-                             gap: '8px',
-                             fontSize: '0.8rem',
-                             cursor: 'pointer'
-                         }}>
-                             <FileText size={14} />
-                             Open Full Document
-                             <ExternalLink size={12} />
-                         </button>
-                    </div>
+                            {/* Relevance score */}
+                            <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RELEVANCE:</span>
+                                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                    <div style={{
+                                        width: `${source.relevance * 100}%`,
+                                        height: '100%',
+                                        background: source.relevance > 0.7 ? 'var(--neon-teal)' : source.relevance > 0.5 ? 'var(--neon-orange)' : '#ff6b6b',
+                                        borderRadius: '2px'
+                                    }} />
+                                </div>
+                                <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--neon-teal)' }}>
+                                    {(source.relevance * 100).toFixed(0)}%
+                                </span>
+                            </div>
+
+                            <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button style={{
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    color: '#fff',
+                                    padding: '8px 16px',
+                                    borderRadius: '6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer'
+                                }}>
+                                    <FileText size={14} />
+                                    View in Riksdagen
+                                    <ExternalLink size={12} />
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </motion.div>

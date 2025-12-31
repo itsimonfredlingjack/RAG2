@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import GlassCard from '../ui/GlassCard';
-import { Database, Cpu, Layers, Shield, Zap, Info } from 'lucide-react';
+import { Database, Cpu, Layers, Shield, Zap, Info, AlertTriangle } from 'lucide-react';
+import { useSystemMetrics, formatDocCount } from '../../hooks/useSystemMetrics';
 
 const Sidebar: React.FC = () => {
-    const [gpuUtil, setGpuUtil] = useState(78);
-    const [temp, setTemp] = useState(64);
+    const { gpu, stats, health, loading, error } = useSystemMetrics();
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setGpuUtil(prev => Math.min(99, Math.max(40, prev + (Math.random() - 0.5) * 8)));
-            setTemp(prev => Math.min(85, Math.max(50, prev + (Math.random() - 0.5) * 4)));
-        }, 3000);
-        return () => clearInterval(interval);
-    }, []);
+    // Derive values from real data with fallbacks
+    const gpuUtil = gpu?.utilization ?? 0;
+    const temp = gpu?.temperature ?? 0;
+    const vramUsed = gpu ? gpu.memory_used / 1024 : 0; // Convert MB to GB
+    const vramTotal = gpu ? gpu.memory_total / 1024 : 12; // Convert MB to GB
+    const totalDocs = stats?.total_documents ?? 0;
+    const collectionCount = stats ? Object.keys(stats.collections).length : 0;
+    const isConnected = health?.status === 'healthy';
 
     return (
         <GlassCard style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }} glow>
@@ -36,8 +37,14 @@ const Sidebar: React.FC = () => {
                     fontFamily: 'Outfit, sans-serif'
                 }}>CONSTITUTIONAL<br /><span style={{ color: '#fff', fontSize: '0.9rem' }}>MISTRAL ENGINE</span></h2>
                 <div className="font-mono" style={{ fontSize: '0.55rem', color: 'var(--text-muted)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--neon-teal)', boxShadow: 'var(--teal-glow)' }} />
-                    UPTIME: 7D 14H 32M
+                    <div style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        background: isConnected ? 'var(--neon-teal)' : '#ff4d4d',
+                        boxShadow: isConnected ? 'var(--teal-glow)' : '0 0 10px #ff4d4d'
+                    }} />
+                    {loading ? 'CONNECTING...' : isConnected ? 'SYSTEM ONLINE' : 'OFFLINE'}
                 </div>
             </motion.div>
 
@@ -52,28 +59,37 @@ const Sidebar: React.FC = () => {
             {/* Knowledge Vault */}
             <Section title="KNOWLEDGE VAULT">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <StatBox label="TOTAL_DOCS" value="2.08M" icon={<Database size={12} />} color="var(--neon-teal)" />
-                    <StatBox label="COLLECTIONS" value="02" icon={<Layers size={12} />} color="var(--neon-orange)" />
+                    <StatBox label="TOTAL_DOCS" value={formatDocCount(totalDocs)} icon={<Database size={12} />} color="var(--neon-teal)" />
+                    <StatBox label="COLLECTIONS" value={collectionCount.toString().padStart(2, '0')} icon={<Layers size={12} />} color="var(--neon-orange)" />
                 </div>
                 <div className="font-mono" style={{ marginTop: '8px', fontSize: '0.6rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.2)', padding: '6px', borderRadius: '4px' }}>
-                    [INDEX] RIKSDAG_DOCS | GOV_DOCS
+                    {stats ? Object.keys(stats.collections).slice(0, 2).map(c => c.toUpperCase().replace('_', ' ')).join(' | ') : '[LOADING...]'}
                 </div>
             </Section>
 
             {/* System Telemetry */}
             <Section title="SYSTEM TELEMETRY">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                    <MetricBar label="GPU UTILS" value={gpuUtil} max={100} unit="%" color="var(--neon-orange)" />
-                    <MetricBar label="VRAM (12GB)" value={8.2} max={12} unit="GB" color="var(--neon-teal)" />
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <div style={{ flex: 1 }}>
-                            <MetricBar label="TEMP" value={temp} max={90} unit="°C" color={temp > 75 ? '#ff4d4d' : 'var(--neon-teal)'} />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '2px' }}>
-                            <div className="font-mono" style={{ fontSize: '0.6rem', color: 'var(--neon-teal)' }}>STATUS: OK</div>
+                {error ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ff4d4d', fontSize: '0.75rem' }}>
+                        <AlertTriangle size={14} />
+                        Backend offline
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                        <MetricBar label="GPU UTILS" value={gpuUtil} max={100} unit="%" color="var(--neon-orange)" />
+                        <MetricBar label={`VRAM (${vramTotal.toFixed(0)}GB)`} value={vramUsed} max={vramTotal} unit="GB" color="var(--neon-teal)" />
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <div style={{ flex: 1 }}>
+                                <MetricBar label="TEMP" value={temp} max={90} unit="°C" color={temp > 75 ? '#ff4d4d' : 'var(--neon-teal)'} />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '2px' }}>
+                                <div className="font-mono" style={{ fontSize: '0.6rem', color: gpu ? 'var(--neon-teal)' : 'var(--text-muted)' }}>
+                                    {gpu ? `STATUS: ${gpu.name.includes('4070') ? 'RTX 4070' : 'GPU'}` : 'NO GPU'}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
             </Section>
 
             {/* System Status Indicators */}
